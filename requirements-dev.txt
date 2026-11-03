@@ -1,0 +1,5 @@
+pytest>=8
+pytest-xdist>=3.6
+ruff==0.14.8
+mypy==1.19.0
+actionlint-py==1.7.12.25

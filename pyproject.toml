@@ -1,0 +1,27 @@
+[project]
+name = "chara-parts"
+version = "0.1.0"
+description = "Draw a whole character, cut reusable parts out of it by fixed rules, and recombine them across 19 age stages"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+dependencies = ["numpy>=2.0", "scipy>=1.13", "pillow>=10.4"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 320  # the comments are long single lines; the limit is only a backstop
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+# One-line `a; b` and `if x: y` statements and short lambdas are used deliberately in the numeric code.
+ignore = ["E701", "E702", "E731", "E741"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["E402"]  # tests put the repository root on sys.path before importing it
+
+[tool.mypy]
+python_version = "3.11"
+ignore_missing_imports = true
+check_untyped_defs = false

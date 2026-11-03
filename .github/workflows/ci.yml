@@ -1,0 +1,139 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: '23 3 * * 1' # every Monday: run everything, to notice dependencies going stale
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# While the repository is private only the light checks (static, secrets, one test job) run, to stay inside the free minutes.
+# The full matrix, trufflehog, CodeQL and Scorecard start once the repository is public.
+# The conditions compare the text of `private` ('true' / 'false'): a run whose event payload has no repository (not documented for `schedule`) starts neither side.
+jobs:
+  static:
+    name: Lint, types and workflow check
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # The oldest supported Python (requires-python is >=3.11): the types are checked against the dependencies that version can install.
+      - name: Set up Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.11'
+      - name: Install
+        run: python -m pip install -r requirements.txt -r requirements-dev.txt
+      - name: Lint
+        run: ruff check .
+      - name: Types
+        run: mypy --config-file pyproject.toml ./*.py
+      - name: Check the workflow files
+        run: actionlint
+
+  gitleaks:
+    name: gitleaks (whole history)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Download and verify gitleaks
+        env:
+          GITLEAKS_VERSION: 8.30.0
+          GITLEAKS_SHA256: 79a3ab579b53f71efd634f3aaf7e04a0fa0cf206b7ed434638d1547a2470a66e
+        run: |
+          mkdir -p "$RUNNER_TEMP/gitleaks"
+          curl --fail --silent --show-error --location \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
+            --output "$RUNNER_TEMP/gitleaks/gitleaks.tar.gz"
+          echo "${GITLEAKS_SHA256}  $RUNNER_TEMP/gitleaks/gitleaks.tar.gz" | sha256sum --check --status
+          tar -xzf "$RUNNER_TEMP/gitleaks/gitleaks.tar.gz" -C "$RUNNER_TEMP/gitleaks" gitleaks
+      - name: Scan the working tree and every commit
+        run: |
+          "$RUNNER_TEMP/gitleaks/gitleaks" dir . --redact --exit-code 1
+          "$RUNNER_TEMP/gitleaks/gitleaks" git . --redact --exit-code 1
+
+  trufflehog:
+    name: trufflehog (whole history)
+    if: ${{ format('{0}', github.event.repository.private) == 'false' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Download and verify trufflehog
+        env:
+          TRUFFLEHOG_VERSION: 3.99.8
+          TRUFFLEHOG_SHA256: 7c3b02f160f28929a467e29e20fba98746e0729f6e37c3c25761e4f8789abe08
+        run: |
+          mkdir -p "$RUNNER_TEMP/trufflehog"
+          curl --fail --silent --show-error --location \
+            "https://github.com/trufflesecurity/trufflehog/releases/download/v${TRUFFLEHOG_VERSION}/trufflehog_${TRUFFLEHOG_VERSION}_linux_amd64.tar.gz" \
+            --output "$RUNNER_TEMP/trufflehog/trufflehog.tar.gz"
+          echo "${TRUFFLEHOG_SHA256}  $RUNNER_TEMP/trufflehog/trufflehog.tar.gz" | sha256sum --check --status
+          tar -xzf "$RUNNER_TEMP/trufflehog/trufflehog.tar.gz" -C "$RUNNER_TEMP/trufflehog" trufflehog
+      - name: Scan the working tree and every commit
+        run: |
+          "$RUNNER_TEMP/trufflehog/trufflehog" filesystem . --fail --no-update
+          "$RUNNER_TEMP/trufflehog/trufflehog" git "file://$PWD" --fail --no-update
+
+  tests-private:
+    name: Tests (private, ubuntu, Python 3.12)
+    if: ${{ format('{0}', github.event.repository.private) == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.12'
+      - name: Install
+        run: python -m pip install -r requirements.txt -r requirements-dev.txt
+      - name: Run tests (includes the pinned outputs and the sample sheet)
+        run: python -m pytest -n auto -p no:cacheprovider
+
+  tests:
+    name: Tests (${{ matrix.os }}, Python ${{ matrix.python-version }})
+    if: ${{ format('{0}', github.event.repository.private) == 'false' }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python-version: ['3.11', '3.12', '3.13']
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install
+        run: python -m pip install -r requirements.txt -r requirements-dev.txt
+      - name: Run tests (includes the pinned outputs and the sample sheet)
+        run: python -m pytest -n auto -p no:cacheprovider
