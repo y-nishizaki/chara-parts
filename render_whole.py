@@ -253,7 +253,7 @@ def meta() -> dict:
     return json.loads((PARTS / "meta.json").read_text(encoding="utf-8"))
 
 
-@lru_cache(maxsize=None)
+@lru_cache(maxsize=64)  # 1254x1254 RGBA の画像（約 6 MiB）を持つので、数に上限を付ける
 def part(i: int, name: str) -> Image.Image:
     return Image.open(PARTS / IDS[i] / f"{name}.png").convert("RGBA")
 
@@ -265,14 +265,14 @@ WRINKLE_GAIN_STAGE = {"40s": 3.2, "50s": 2.5, "60s": 1.0, "70s": 0.8, "80+": 0.5
 WRINKLE_GAIN = {"mid": 3.0, "senior": 1.0}  # しわの層の強さ（40〜50 代は元の線が薄いので強め、60 代以上は土台の線と重なるので弱め）。40〜50 代 2.2 → 3.0
 
 
-@lru_cache(maxsize=None)
+@lru_cache(maxsize=64)  # 同じく画像を持つ
 def wrinkle_part(i: int):
     """40〜50 代・60 代以上の元の絵から取ったしわ・ほうれい線の層（土台と同じ座標）。無い年代は None。"""
     f = PARTS / IDS[i] / "wrinkles.png"
     return Image.open(f).convert("RGBA") if f.exists() else None
 
 
-@lru_cache(maxsize=None)
+@lru_cache(maxsize=16)  # 同じく画像を 2 枚持つ
 def body(o: int) -> dict:
     b = OUTFITS[o]["band"]
     d = PARTS / "bodies" / (f"{OUTFITS[o]['gender']}_{OUTFITS[o]['name']}" if b == ages.DEFAULT_BAND
@@ -490,7 +490,7 @@ def lum(rgb):
     return 0.299 * rgb[..., 0] + 0.587 * rgb[..., 1] + 0.114 * rgb[..., 2]
 
 
-@lru_cache(maxsize=None)
+@lru_cache(maxsize=64)  # 同じく画像を持つ
 def brow_part(j: int) -> Image.Image:
     """眉の部品から、左右それぞれ一番大きい 1 本（線と塗り）とそのまわりの肌の影だけを残す。目の下のまぶたの線や
     額の細い線の切れ端（おでこの斜線に見えた）と、肌より明るい筋（眉の上の明るい線）は消す。"""

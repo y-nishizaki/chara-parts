@@ -1,14 +1,18 @@
 Artwork license: CC BY 4.0
 
-The image files under this directory (the character parts and the sample
-sheets) were generated with an AI image-generation tool and then processed by
-the code in this repository. Copyright (c) 2026 y-nishizaki. They are licensed
-under the Creative Commons Attribution 4.0 International Public License.
+The image files (*.png) under this directory (the character parts) and the
+sample sheet samples/overview.png, which is outside this directory, were
+generated with an AI image-generation tool and then processed by the code in
+this repository. Copyright (c) 2026 y-nishizaki. They are licensed under the
+Creative Commons Attribution 4.0 International Public License.
 
 Attribution: credit "y-nishizaki" and link to https://github.com/y-nishizaki/chara-parts
 (or to https://creativecommons.org/licenses/by/4.0/ for the license).
 
-The source code outside this directory is under the MIT License (../LICENSE).
+Everything else in the repository is under the MIT License (../LICENSE): the
+source code, the tests, and the data and configuration files, including the
+JSON files under this directory (assets/parts_whole/), pyproject.toml, the
+requirements files, README.md and the CI settings.
 
 ----------------------------------------------------------------------------
 

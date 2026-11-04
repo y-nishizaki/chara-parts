@@ -910,3 +910,30 @@ def test_h18_is_not_used(seed):
     # h18（f6 の髪）は元の絵の毛束の線の間が透明で、左の毛束に白い点の列が残った
     for s in adult_specs(seed, 100):
         assert s["hair"] != 18, s
+
+
+@pytest.mark.parametrize("name", ["part", "brow_part", "wrinkle_part", "body"])
+def test_image_cache_does_not_grow_past_its_bound(name, monkeypatch):
+    # Each real entry is one or two 1254x1254 RGBA images (6 MiB each). Unbounded, a full sample sheet or test run
+    # kept 3 GB or more per process, and a 7 GB CI runner was killed for lack of memory. Tiny stand-in images are used here.
+    cached = getattr(rw, name)
+    bound = cached.cache_info().maxsize
+    assert bound is not None, f"rw.{name} has no upper bound"
+    monkeypatch.setattr(Image, "open", lambda *args, **kwargs: Image.new("RGBA", (4, 4)))
+    if name == "part":
+        calls = [(i, layer) for i in range(len(rw.IDS)) for layer in ("base", "brows", "eyes", "hair_back", "hair_front", "hair_thin", "mouth", "nose")]
+    elif name == "body":
+        calls = [(o,) for o in range(len(rw.OUTFITS))]
+    else:
+        calls = [(i,) for i in range(len(rw.IDS))]
+    if name == "brow_part":
+        monkeypatch.setattr(rw, "part", lambda i, layer: Image.new("RGBA", (4, 4)))
+    calls = calls[:bound + 5]
+    assert len(calls) > bound
+    cached.cache_clear()
+    try:
+        for args in calls:
+            cached(*args)
+        assert cached.cache_info().currsize == bound
+    finally:
+        cached.cache_clear()

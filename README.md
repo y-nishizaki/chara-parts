@@ -17,9 +17,11 @@ python3 -m venv .venv && . .venv/bin/activate
 pip install -r requirements.txt -r requirements-dev.txt
 
 python3 sample_sheet.py --stages 4-5 30s 80+ --columns 4 --size 256 --seed 3 --out small.png   # about a minute
-python3 sample_sheet.py --out sheet.png          # every stage, six characters per row; about 8-9 minutes
-python3 -m pytest -n 2                            # about 20 minutes: it renders a lot of faces
+python3 sample_sheet.py --out sheet.png          # every stage, six characters per row; about 8-9 minutes, about 2 GB of memory
+python3 -m pytest -n 2                            # about 20-25 minutes and about 2 GB of memory per worker: it renders a lot of faces
 ```
+
+The memory figures are the peak resident size measured in a 2-core Linux container. CI checks types with `mypy` on Python 3.11, the oldest supported version; on Python 3.12 or newer `mypy` fails, because the type stubs of numpy 2.5 use syntax that `python_version = "3.11"` in `pyproject.toml` rejects, so run it on 3.11 as CI does.
 
 Render one character from a spec file:
 
@@ -92,5 +94,5 @@ The pictures under `assets/` were generated with an AI image-generation tool and
 
 ## License
 
-- Code and all data and configuration files — `*.py`, tests (including `tests/golden_adult.json`), `ages_registry.json`, `age_score_latest.json`, the JSON files in `assets/parts_whole/`, `pyproject.toml`, requirements, CI: MIT — see [`LICENSE`](LICENSE).
-- Artwork — the image files (`*.png`) under `assets/`, and the sample sheets under `samples/`: Creative Commons Attribution 4.0 International — see [`assets/LICENSE`](assets/LICENSE). Credit "y-nishizaki" and link back to this repository.
+- Code and all data and configuration files — `*.py`, tests (including `tests/golden_adult.json`), `ages_registry.json`, `age_score_latest.json`, the JSON files in `assets/parts_whole/`, `pyproject.toml`, requirements, CI, and this README: MIT — see [`LICENSE`](LICENSE).
+- Artwork — the image files (`*.png`) under `assets/`, and the sample sheet `samples/overview.png` (outside `assets/`): Creative Commons Attribution 4.0 International — see [`assets/LICENSE`](assets/LICENSE), which names `samples/overview.png` too. Credit "y-nishizaki" and link back to this repository.
