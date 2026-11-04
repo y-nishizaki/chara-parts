@@ -912,13 +912,18 @@ def test_h18_is_not_used(seed):
         assert s["hair"] != 18, s
 
 
+MAX_IMAGE_CACHE_BOUND = {"part": 64, "brow_part": 64, "wrinkle_part": 64, "body": 16}
+
+
 @pytest.mark.parametrize("name", ["part", "brow_part", "wrinkle_part", "body"])
 def test_image_cache_does_not_grow_past_its_bound(name, monkeypatch):
     # Each real entry is one or two 1254x1254 RGBA images (6 MiB each). Unbounded, a full sample sheet or test run
-    # kept 3 GB or more per process, and a 7 GB CI runner was killed for lack of memory. Tiny stand-in images are used here.
+    # kept 3 GB or more per process; in a 2-core Linux container limited to 7 GB the test run was killed for lack of memory.
+    # The bound must stay small enough for that (64 entries of 6 MiB is about 0.4 GB per cache). Tiny stand-in images are used here.
     cached = getattr(rw, name)
     bound = cached.cache_info().maxsize
     assert bound is not None, f"rw.{name} has no upper bound"
+    assert bound <= MAX_IMAGE_CACHE_BOUND[name], f"rw.{name} keeps up to {bound} images; the memory budget allows {MAX_IMAGE_CACHE_BOUND[name]}"
     monkeypatch.setattr(Image, "open", lambda *args, **kwargs: Image.new("RGBA", (4, 4)))
     if name == "part":
         calls = [(i, layer) for i in range(len(rw.IDS)) for layer in ("base", "brows", "eyes", "hair_back", "hair_front", "hair_thin", "mouth", "nose")]
