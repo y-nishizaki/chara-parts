@@ -21,7 +21,7 @@ python3 sample_sheet.py --out sheet.png          # every stage, six characters p
 python3 -m pytest -n 2                            # 20-55 minutes depending on the machine, about 2 GB of memory per worker: it renders a lot of faces
 ```
 
-The memory figures are the peak resident size measured in a 2-core Linux container with 7 GB of memory, where the sample sheet took about 8-9 minutes and the test run about 20-25 minutes. On GitHub-hosted runners (Actions) the test run took 23-45 minutes on the public runners (macOS, Linux and Windows, 3-4 vCPU) and 54 minutes on the 2-vCPU private-repository runner. CI checks types with `mypy` on Python 3.11, the oldest supported version; on Python 3.12 or newer `mypy` fails, because the type stubs of numpy 2.5 use syntax that `python_version = "3.11"` in `pyproject.toml` rejects, so run it on 3.11 as CI does.
+The memory figures are the peak resident size measured in a 2-core Linux container with 7 GB of memory, where the sample sheet took about 8-9 minutes and the test run about 20-25 minutes. On GitHub-hosted runners (Actions) the test run took about 20-45 minutes on the public runners (macOS, Linux and Windows, 3-4 vCPU) and 54 minutes on the 2-vCPU private-repository runner. CI checks types with `mypy` on Python 3.11, the oldest supported version; on Python 3.12 or newer with numpy 2.5, `mypy` reports three `call-overload` errors (on `.min()` and `.max()`), which comes from numpy 2.5's type stubs together with `python_version = "3.11"` in `pyproject.toml`, so run it on 3.11 as CI does.
 
 Render one character from a spec file:
 
