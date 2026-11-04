@@ -398,7 +398,7 @@ def extract_one(pid, marks):
     return parts, meta
 
 
-REGISTER = {}  # complete_marks が測った、髪を消した版を元の絵に合わせるずれ（register.json に書く）
+REGISTER: dict[str, dict] = {}  # complete_marks が測った、髪を消した版を元の絵に合わせるずれ（register.json に書く）
 
 
 def complete_marks(pid, manual):
